@@ -46,12 +46,10 @@ How did your models from last time perform? In this exercise you have to compare
 
 
 ```{r, include = FALSE}
-setwd("C:/Users/louis/OneDrive - Aarhus universitet/AU Onedrive - RIGTIG/- 3. Semester/Experimental Methods III/Classes/Assignment 2/Assignment-2")
 
-# Loading packages
-install.packages('BiocManager')
-library(pacman)
-pacman::p_load(tidyverse, caret, cvms)
+pacman::p_load(readr,dplyr,stringr,lmerTest,Metrics,caret,tidyverse,devtools)
+
+
 
 ## Clean up function, included to inspire you
 
@@ -60,10 +58,10 @@ CleanUpData <- function(Demo,LU,Word){
   Speech <- merge(LU, Word) %>% 
     rename(
       Child.ID = SUBJ, 
-      Visit = VISIT) %>%
+      Visit=VISIT) %>%
     mutate(
       Visit = as.numeric(str_extract(Visit, "\\d")),
-      Child.ID = gsub("\\.","", Child.ID) #Replaces dots with nothing
+      Child.ID = gsub("\\.","", Child.ID)
       ) %>%
     dplyr::select(
       Child.ID, Visit, MOT_MLU, CHI_MLU, types_MOT, types_CHI, tokens_MOT, tokens_CHI
@@ -74,7 +72,7 @@ CleanUpData <- function(Demo,LU,Word){
       Child.ID, Visit, Ethnicity, Diagnosis, Gender, Age, ADOS, MullenRaw, ExpressiveLangRaw, Socialization
     ) %>%
     mutate(
-      Child.ID = gsub("\\.","", Child.ID) #Replaces dots with nothing
+      Child.ID = gsub("\\.","", Child.ID)
     )
     
   Data=merge(Demo,Speech,all=T)
@@ -89,7 +87,7 @@ CleanUpData <- function(Demo,LU,Word){
   
   Data=merge(Data, Data1, all=T) %>%
     mutate(
-      Child.ID = as.numeric(as.factor(as.character(Child.ID))), #Anonymising participants
+      Child.ID = as.numeric(as.factor(as.character(Child.ID))),
       Visit = as.numeric(as.character(Visit)),
       Gender = recode(Gender, 
          "1" = "M",
@@ -103,41 +101,35 @@ CleanUpData <- function(Demo,LU,Word){
 }
 
 # Load training Data
-Demo_train <- read.csv("demo_train.csv")
-LU_train <- read.csv("LU_train.csv")
-Word_train <- read.csv("token_train.csv")
+Demo_train <- read_csv("demo_train.csv")
+LU_train <- read_csv("LU_train.csv")
+Word_train <- read_csv("token_train.csv")
 
-# Using the function
 df_train <- CleanUpData(Demo_train, LU_train, Word_train)
-
 #- recreate the models you chose last time (just write the code again and apply it to Train Data)
 m1 <- lmer(CHI_MLU ~ Visit * Diagnosis * verbalIQ1 + (1 + Visit|Child.ID), df_train, REML = F)
 summary(m1)
 
 #- calculate performance of the model on the training data: root mean square error is a good measure. (Tip: google the function rmse())
-actual <- na.omit(df_train$CHI_MLU) # ignores the NAs
-prediction <- predict(m1) # m1 predicts CHI_MLU in this model
-prediction
-ModelMetrics::rmse(actual, prediction) # How is the performance? 0.36 (the closer to zero, the better)
-# Average error on a kid (that we have seen already) is 0.36 morphemes. You could assess the SD(CHI_MLU) as well...
+actual <- na.omit(df_train$CHI_MLU)
+prediction <- predict(m1)
+rmse(actual, prediction)
 
 #- create the test dataset (apply the code from assignment 1 or my function to clean up the 3 test datasets)
 # Test data
-# Loading test data
-Demo_test <- read.csv("demo_test.csv")
-LU_test <- read.csv("LU_test.csv")
-Word_test <- read.csv("token_test.csv")
+Demo_test <- read_csv("demo_test.csv")
+LU_test <- read_csv("LU_test.csv")
+Word_test <- read_csv("token_test.csv")
 
-# Cleaning the data
 df_test <- CleanUpData(Demo_test, LU_test, Word_test)
-
 #- test the performance of the models on the test data (Tips: google the functions "predict()")
-actual <- na.omit(df_test$CHI_MLU) # ignores the NAs
-prediction <- predict(m1, subset(df_test, !is.na(CHI_MLU))) # m1 predicts CHI_MLU in this model
-ModelMetrics::rmse(actual, prediction) # How is the performance? (the closer to zero, the better. This is okay (0.66), but still worse than the model is on the training set)
-
-# This value (root mean squared error) bigger than on train set, meaning that the model might be overfitted (to the training set).
-
+actual <- na.omit(df_test$CHI_MLU)
+prediction <- predict(m1, subset(df_test, !is.na(CHI_MLU)), allow.new.levels = T)
+prediction
+rmse(actual, prediction)
+x <- subset(df_test, !is.na(CHI_MLU))
+y <- df_test[-2,]
+#RMSE is biggest on the test set which tells us that the model might be overfitting the training set.
 #- optional: predictions are never certain, can you identify the uncertainty of the predictions? (e.g. google predictinterval())
 
 ```
@@ -153,6 +145,7 @@ In this exercise you have to use cross-validation to calculate the predictive er
 - Use cross-validation to compare your model from last week with the basic model (Child MLU as a function of Time and Diagnosis, and don't forget the random effects!)
 - (Tips): google the function "createFolds";  loop through each fold, train both models on the other folds and test them on the fold)
 
+
 - Now try to find the best possible predictive model of ChildMLU, that is, the one that produces the best cross-validated results.
 
 - Bonus Question 1: What is the effect of changing the number of folds? Can you plot RMSE as a function of number of folds?
@@ -160,46 +153,52 @@ In this exercise you have to use cross-validation to calculate the predictive er
 
 
 ```{r}
-# Cutting the train dataset into a certain amount of slices. Repeat what we have been doing so far. Train on all slices except for one. TEst on that. Save the testing performance. Then do it for the next slice (train and test...). 5 is a standard number of times. Gives a nice measure of how well the model will generalise to new data without using new data. If the five values are very far from each other: you are not doing too good.
-# cvms package - does cross validation and calcultation of performance for you. Try to start making own loop, you learn from that - but do not spend too much time doing this... primarily for you to learn.
-
-
 #- Create the basic model of ChildMLU as a function of Time and Diagnosis (don't forget the random effects!).
-m0 <- lmer(CHI_MLU ~ Visit * Diagnosis + (1 + Visit|Child.ID), df_train, REML = F)
-summary(m0)
-
+m0 <- lmer(CHI_MLU ~ Visit * Diagnosis + (1+Visit|Child.ID), df_train, REML = F)
 #- Make a cross-validated version of the model. (Tips: google the function "createFolds";  loop through each fold, train a model on the other folds and test it on the fold)
 set.seed(1)
+rmse0 <- NULL
+rmse1 <- NULL
+rmse2 <- NULL
 folds <- createFolds(unique(df_train$Child.ID), 5)
-
 for (f in folds){
-  train <- subset(df_train, !(Child.ID %in% f)) # Train data
-  model <- lmer(CHI_MLU ~ Visit * Diagnosis + (1 + Visit|Child.ID), data=train, REML = F, lmerControl(optCtrl=list(xtol_abs=1e-8, ftol_abs=1e-8)))
-  actual <- na.omit(subset(df_train, (Child.ID %in% f))) # Test data
+  train <- subset(df_train, !(Child.ID %in% f))
+  model <- lmer(CHI_MLU ~ Visit + Diagnosis + (1+Visit|Child.ID), data=train, REML = F, lmerControl(optCtrl=list(xtol_abs=1e-8, ftol_abs=1e-8)))
+  actual <- na.omit(subset(df_train, (Child.ID %in% f)))
   predictions <- predict(model, actual, allow.new.levels=T)
   print(ModelMetrics::rmse(actual$CHI_MLU, predictions))
-  rmse1 <- c(rmse, na.omit(ModelMetrics::rmse(actual$CHI_MLU, predictions)))
+  rmse0 <- c(rmse0, rmse(actual$CHI_MLU, predictions))
+}
+for (f in folds){
+  train <- subset(df_train, !(Child.ID %in% f))
+  model <- lmer(CHI_MLU ~ Visit * Diagnosis + (1+Visit|Child.ID), data=train, REML = F, lmerControl(optCtrl=list(xtol_abs=1e-8, ftol_abs=1e-8)))
+  actual <- na.omit(subset(df_train, (Child.ID %in% f)))
+  predictions <- predict(model, actual, allow.new.levels=T)
+  print(ModelMetrics::rmse(actual$CHI_MLU, predictions))
+  rmse1 <- c(rmse1, rmse(actual$CHI_MLU, predictions))
+}
+for (f in folds){
+  train <- subset(df_train, !(Child.ID %in% f))
+  model <- lmer(CHI_MLU ~ Visit * Diagnosis * verbalIQ1 + (1+Visit|Child.ID), data=train, REML = F, lmerControl(optCtrl=list(xtol_abs=1e-8, ftol_abs=1e-8)))
+  actual <- na.omit(subset(df_train, (Child.ID %in% f)))
+  predictions <- predict(model, actual, allow.new.levels=T)
+  print(ModelMetrics::rmse(actual$CHI_MLU, predictions))
+  rmse2 <- c(rmse2, rmse(actual$CHI_MLU, predictions))
 }
 
-#- Report the results and comment on them.
-# REPORT!!!
-mean(rmse1)
-# These are relatively close to each other, this is a good sign. The average of this particular cross-validation = 0.38
-sd(na.omit(df_train$CHI_MLU))
-# Standard deviation = 0.93. Meaning that the model is a better prediction than the mean of the data.
+#- Report the results and comment on them
+sd(df_train$CHI_MLU, na.rm = T) #0.93 
+mean(rmse0, na.rm = T) #0.53 CHI_MLU ~ Visit + Diagnosis + (1+Visit|Child.ID)
+
+#Our RMSE is lower than our SD. This means that the model is relatively better at predicting the values than just using the mean.
 
 #- Now try to find the best possible predictive model of ChildMLU, that is, the one that produces the best cross-validated results.
-for (f in folds){
-  train <- subset(df_train, !(Child.ID %in% f)) # Train data
-  model <- lmer(CHI_MLU ~ Visit + Diagnosis + (1 + Visit|Child.ID), data=train, REML = F, lmerControl(optCtrl=list(xtol_abs=1e-8, ftol_abs=1e-8)))
-  actual <- na.omit(subset(df_train, (Child.ID %in% f))) # Test data
-  predictions <- predict(model, actual, allow.new.levels=T)
-  print(ModelMetrics::rmse(actual$CHI_MLU, predictions))
-  rmse0 <- c(rmse, na.omit(ModelMetrics::rmse(actual$CHI_MLU, predictions)))
-}
-
-# Mean
-mean(rmse0)
+#Trying Ludvigs genius function
+#install_github("LudvigOlsen/cvms")
+#install_github("LudvigOlsen/groupdata2")
+mean(rmse1, na.rm = T) #0.51 CHI_MLU ~ Visit * Diagnosis + (1+Visit|Child.ID)
+mean(rmse2, na.rm = T) #0.44 CHI_MLU ~ Visit * Diagnosis * verbalIQ1 + (1+Visit|Child.ID)
+#The best model seems to be the model where there is a triple interaction effect between Visit, Diagnosis and verbalIQ1. 
 
 # Bonus Question 1: What is the effect of changing the number of folds? Can you plot RMSE as a function of number of folds?
 # Bonus Question 2: compare the cross-validated predictive error against the actual predictive error on the test data
@@ -220,36 +219,25 @@ You want to evaluate:
 - how does the child fare compared to the model predictions at Visit 6? Is the child below or above expectations? (tip: use the predict() function on Bernie's data only and compare the prediction with the actual performance of the child)
 
 ```{r}
-# Bernie = Child.ID: 2
+#By cross referencing we found that bernie has gotten the number "2" in the anonymisation process
+bernie <-
+  df_test %>%
+  filter(Child.ID == "2")
 
-# Extracting Bernie from the rest of the children
-Bernie <-
-  df_test %>% 
-  filter(Child.ID == 2)
+TDvsBernie <-
+  df_train %>%
+  filter(Diagnosis == "TD") %>%
+  group_by(Visit) %>%
+  summarise(mean=mean(CHI_MLU, na.rm = T)) %>%
+  mutate(bernie$CHI_MLU) %>%
+  mutate(bernie$CHI_MLU-mean)
 
-# Checking the mean of the TD's in each visit
-TDs <-
-  df_train %>% 
-  filter(Diagnosis == "TD") %>% 
-  group_by(Visit) %>% 
-  summarise(mean = mean(CHI_MLU, na.rm = T)) %>% 
-  mutate(difference = (Bernie$CHI_MLU-TDs$mean))
+mbest <- lmer(CHI_MLU ~ Visit * Diagnosis * verbalIQ1 + (1+Visit|Child.ID), data = df_train, REML = F, lmerControl(optCtrl=list(xtol_abs=1e-8, ftol_abs=1e-8)))
 
-# That is, Bernie has longer MLU than the average TD child througout all the visits.
-
-# Bernie compared to predictions for visit 6 - is he below or above expectations?
-prediction <- predict(m0, Bernie)
+prediction <- predict(mbest, bernie)
 prediction
-# Me and Anna get 3.78, the boys get 1.72.
-
-# Bernies actual performance at visit 6
-Bernie %>% 
-  filter(Visit == 6) %>% 
-  select(CHI_MLU)
-# 3.45
-
-# That is, following me and Anna's predictions, he does worse than expected. But following Oliver and Malte's predictions, Bernie does better than expected.
-
+TDvsBernie$prediction <- prediction
+TDvsBernie[6,]
 ```
 
 
