@@ -47,7 +47,10 @@ How did your models from last time perform? In this exercise you have to compare
 
 ```{r, include = FALSE}
 
-pacman::p_load(readr,dplyr,stringr,lmerTest,Metrics,caret,tidyverse,devtools)
+pacman::p_load(readr,dplyr,stringr,lmerTest,Metrics,caret,tidyverse,devtools, groupdata2, cvms)
+install.packages("githubinstall")
+library(githubinstall)
+# githubinstall("cvms")
 
 
 
@@ -122,6 +125,10 @@ LU_test <- read_csv("LU_test.csv")
 Word_test <- read_csv("token_test.csv")
 
 df_test <- CleanUpData(Demo_test, LU_test, Word_test)
+
+# Saving the datasets
+# write_csv(df_test)
+
 #- test the performance of the models on the test data (Tips: google the functions "predict()")
 actual <- na.omit(df_test$CHI_MLU)
 prediction <- predict(m1, subset(df_test, !is.na(CHI_MLU)), allow.new.levels = T)

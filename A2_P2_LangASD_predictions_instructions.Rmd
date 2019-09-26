@@ -51,7 +51,7 @@ setwd("C:/Users/louis/OneDrive - Aarhus universitet/AU Onedrive - RIGTIG/- 3. Se
 # Loading packages
 install.packages('BiocManager')
 library(pacman)
-pacman::p_load(tidyverse, caret, cvms)
+pacman::p_load(tidyverse, caret, cvms, ModelMetrics)
 
 ## Clean up function, included to inspire you
 
@@ -182,8 +182,8 @@ for (f in folds){
 }
 
 #- Report the results and comment on them.
-# REPORT!!!
 mean(rmse1)
+
 # These are relatively close to each other, this is a good sign. The average of this particular cross-validation = 0.38
 sd(na.omit(df_train$CHI_MLU))
 # Standard deviation = 0.93. Meaning that the model is a better prediction than the mean of the data.
