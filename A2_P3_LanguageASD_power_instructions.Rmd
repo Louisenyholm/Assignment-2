@@ -41,16 +41,25 @@ You will be using:
 setwd("C:/Users/louis/OneDrive - Aarhus universitet/AU Onedrive - RIGTIG/- 3. Semester/Experimental Methods III/Classes/Assignment 2/Assignment-2")
 
 # Installing and loading packages
-install.packages("simr", dependencies = T)
-library(pacman)
-p_load(tidyverse, lme4)
-library(simr)
+# install.packages("simr", dependencies = T)
+# library(pacman)
+# p_load(tidyverse, lme4)
+# library(simr)
+
+library(githubinstall)
+githubinstall("simr", lib = .libPaths())
+print(pacman::p_path() == .libPaths())
+pacman::p_load(tidyverse, lmerTest, simr)
+
 
 # Loading data
 df_train <- read_csv("train.csv")
 df_test <- read_csv("test.csv")
 
-# Merging data
+# Making the test set an extension of the training set regarding IDs
+df_test$Child.ID <- 66 + df_test$Child.ID
+
+# Merging training and test data
 df <- merge(df_train, df_test, all = T)
 
 # Removing NAs
@@ -59,62 +68,66 @@ df <- df[-which(is.na(df$CHI_MLU)),]
 # We assume a normal distribution, because we have seen that human perform normally-distributed in similar intelligent tasks.
 
 # Fitting a model
-model <- lmer(CHI_MLU ~ Visit * Diagnosis * verbalIQ1 + (1 + Visit|Child.ID), df, REML = F, control = lmerControl(optimizer = "nloptwrap", calc.derivs = F))
-
 model0 <- lmer(CHI_MLU ~ Visit + Diagnosis + verbalIQ1 + (1 + Visit|Child.ID), df, REML = F, control = lmerControl(optimizer = "nloptwrap", calc.derivs = F))
+
+model <- lmer(CHI_MLU ~ Visit * Diagnosis * verbalIQ1 + (1 + Visit|Child.ID), df, REML = F, control = lmerControl(optimizer = "nloptwrap", calc.derivs = F))
 
 # Checking the main effect estimates
 fixef(model0)["Visit"] # main effect of 0.23
-fixef(model0)["DiagnosisTD"] # main effect of -0.26
+fixef(model0)["DiagnosisTD"] # main effect of 0.17
 fixef(model0)["verbalIQ1"] # main effect of 0.08
 
 # Checking the interaction effect estimate
-fixef(model)["Visit:DiagnosisTD:verbalIQ1"] # interaction effect of 0.02
+fixef(model)["Visit:DiagnosisTD:verbalIQ1"] # interaction effect of -0.02
 
 # Running the power analysis
 set.seed(123) # Setting a fixed "random"
 
 # On the main effects (model without interactions)
 powerSim(model0, test = fixed("Visit"), nsim = 100) # 100% power for detecting effect of visit (nsim = 100)
-powerSim(model0, test = fixed("Diagnosis"), nsim = 100) # 89% power for detecting effect of diagnosis (nsim = 100)
+powerSim(model0, test = fixed("Diagnosis"), nsim = 100) # 52% power for detecting effect of diagnosis (nsim = 100)
 powerSim(model0, test = fixed("verbalIQ1"), nsim = 100) # 100% power for detecting effect of verbal IQ (nsim = 100)
 
 # On the interaction effect
-powerSim(model, test = fixed("Visit:Diagnosis:verbalIQ1"), nsim=100) # 97% power for detecting the three-way interaction effect (nsim = 100)
+powerSim(model, test = fixed("Visit:Diagnosis:verbalIQ1"), nsim=1000) # 98.30% power for detecting the three-way interaction effect (nsim = 1000)
 
 
 # Report the power analysis and comment on what you can (or cannot) use its estimates for.
 
 # The interaction of Visit * Diagnosis * VerbalIQ1
-# Calculating power based on 1000 simulations gives a beta value of 0.97. This means, that an interaction effect of this size (0.02) is easily detected with a sample like this. It might even be an overpowered study.
+# Calculating power based on 1000 simulations gives a beta/power value of 0.97. This means, that an interaction effect of this size (-0.02) is easily detected with a sample like this. It might even be an overpowered study.
 # COMMENT ON MAIN EFFECTS
+# Correspondingly, the main effects of visit and verbal IQ have a great power (100%). The effect of diagnosis is however just slightly above chance (0.52) for detecting an effect, when it is present.
 
 
 # Test how many participants you would have to have to replicate the findings (assuming the findings are correct)
 
-# We assume that we do not need to extend our simulation, since the powers of the different effects already are above 0.80. It is rather a question about not overpowering the study. We do not need this many participants to detect these effects - neither main effects nor interaction effect.
+# We assume that we do not need to extend our simulation in most of following assessments, since the powers of the most effects are already above 0.80. It is rather a question about not overpowering the study. We do not need this many participants to detect these effects - neither for two of the main effects nor interaction effect.
+# However, for the main effect of diagnosis, an extension - to simulate more participants - might be needed.
+
+model_extended <- extend(model0, along =  "Child.ID", n = 200)
 
 # Main effects
 pc_Visit <- powerCurve(model0, test = fixed("Visit"), along = "Child.ID", nsim = 100)
 print(pc_Visit)
 plot(pc_Visit)
-# In order to replicate the findings of a main effect of Visit, one would need 10 participants (resulting in a beta-value/power of .87)
+# In order to replicate the findings of a main effect of Visit, one would need around 11 participants (resulting in a beta-value/power of .90)
 
-pc_Diagnosis <- powerCurve(model0, test = fixed("Diagnosis"), along = "Child.ID", nsim = 100)
+pc_Diagnosis <- powerCurve(model_extended, test = fixed("Diagnosis"), along = "Child.ID", nsim = 100)
 print(pc_Diagnosis)
 plot(pc_Diagnosis)
-# In order to replicate the findings of a main effect of Diagnosis, one would not really need that many participants. Even with as few as 3 participants, the power is estimated to 0.92.
+# In order to replicate the findings of a main effect of Diagnosis, one would need around 156 participants (resulting in a beta-value/power of .80)
 
 pc_VerbalIQ <- powerCurve(model0, test = fixed("verbalIQ1"), along = "Child.ID", nsim = 100)
 print(pc_VerbalIQ)
 plot(pc_VerbalIQ)
-# In order to replicate the findings of a main effect of verbal IQ, one would need aroung xx participants (resulting in a beta-value/power of .xx)
+# In order to replicate the findings of a main effect of verbal IQ, one would need around 11 participants (resulting in a beta-value/power of .88)
 
 
 pc_inter <- powerCurve(model, test = fixed("Visit:Diagnosis:verbalIQ1"), along = "Child.ID", nsim = 100)
 print(pc_inter)
 plot(pc_inter)
-# In order to replicate the findings of a three-way interaction effect, one would need 31 participants (resulting in a beta-value/power of .8)
+# In order to replicate the findings of a three-way interaction effect, one would need around 34 participants (resulting in a beta-value/power of .84)
 
 
 ```
@@ -133,15 +146,20 @@ How would you perform a more conservative power analysis?
 # - Identify and justify a minimum effect size for each of your relevant effects
 
 # JUSTIFY A MINIMUM EFFECT SIZE
+# For visit
+ggplot(df, aes(Visit, CHI_MLU, colour = Diagnosis))+
+  geom_point()+
+  geom_smooth(method = lm)
+
 
 # - Take the model from exercise 1 and replace the effects with the minimum effect size that you'd accept.
 # Specifying a minimum effect size for the three-way interaction effect
-fixef(model)["Visit:DiagnosisTD:verbalIQ1"] <- 0.2
+fixef(model)["Visit:DiagnosisTD:verbalIQ1"] <- 0.015 
 
 # - Assess the power curve by Child.ID, identifying an ideal number of participants to estimate each effect
 pc_inter2 <- powerCurve(model, test = fixed("Visit:Diagnosis:verbalIQ1"), along = "Child.ID", nsim = 100)
-print(pc_inter)
-plot(pc_inter)
+print(pc_inter2)
+plot(pc_inter2)
 # In order to find a minimum effect size of xxx of the three-way interaction effect, one would need xx participants (resulting in a beta-value/power of .xx)
 
 # - if your power estimates do not reach an acceptable threshold simulate additional participants and repeat the previous analysis

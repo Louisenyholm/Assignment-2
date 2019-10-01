@@ -96,8 +96,8 @@ CleanUpData <- function(Demo,LU,Word){
          "1" = "M",
          "2" = "F"),
       Diagnosis = recode(Diagnosis,
-         "A"  = "TD",
-         "B"  = "ASD")
+         "A"  = "TD", #CHANGE!?!?!?!?!?!
+         "B"  = "ASD") #CHANGE!?!?!?!
     )
 
   return(Data)
