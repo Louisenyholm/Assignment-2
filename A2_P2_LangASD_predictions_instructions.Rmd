@@ -107,39 +107,34 @@ Demo_train <- read.csv("demo_train.csv")
 LU_train <- read.csv("LU_train.csv")
 Word_train <- read.csv("token_train.csv")
 
-# Using the function
+# Using the function to clean up the data
 df_train <- CleanUpData(Demo_train, LU_train, Word_train)
 
 #- recreate the models you chose last time (just write the code again and apply it to Train Data)
 m1 <- lmer(CHI_MLU ~ Visit * Diagnosis * verbalIQ1 + (1 + Visit|Child.ID), df_train, REML = F)
-summary(m1)
 
 #- calculate performance of the model on the training data: root mean square error is a good measure. (Tip: google the function rmse())
-actual <- na.omit(df_train$CHI_MLU) # ignores the NAs
-prediction <- predict(m1) # m1 predicts CHI_MLU in this model
-prediction
-ModelMetrics::rmse(actual, prediction) # How is the performance? 0.36 (the closer to zero, the better)
-# Average error on a kid (that we have seen already) is 0.36 morphemes. You could assess the SD(CHI_MLU) as well...
+actual <- na.omit(df_train$CHI_MLU) # ignores the NAs, defines the actual data (Child MLU)
+prediction <- predict(m1) # predicts value of CHI_MLU based on this model
+ModelMetrics::rmse(actual, prediction) # How is the performance?
+# 0.36
+# Meaning an average error on a child (which we have already seen) is 0.36 morphemes per utterance.
 
 #- create the test dataset (apply the code from assignment 1 or my function to clean up the 3 test datasets)
-# Test data
 # Loading test data
 Demo_test <- read.csv("demo_test.csv")
 LU_test <- read.csv("LU_test.csv")
 Word_test <- read.csv("token_test.csv")
 
-# Cleaning the data
+# Using the function to clean up the data
 df_test <- CleanUpData(Demo_test, LU_test, Word_test)
 
 #- test the performance of the models on the test data (Tips: google the functions "predict()")
-actual <- na.omit(df_test$CHI_MLU) # ignores the NAs
-prediction <- predict(m1, subset(df_test, !is.na(CHI_MLU))) # m1 predicts CHI_MLU in this model
-ModelMetrics::rmse(actual, prediction) # How is the performance? (the closer to zero, the better. This is okay (0.66), but still worse than the model is on the training set)
-
-# This value (root mean squared error) bigger than on train set, meaning that the model might be overfitted (to the training set).
-
-#- optional: predictions are never certain, can you identify the uncertainty of the predictions? (e.g. google predictinterval())
-
+actual <- na.omit(df_test$CHI_MLU) # ignores the NAs, defines actual data (child MLU)
+prediction <- predict(m1, subset(df_test, !is.na(CHI_MLU))) # predicts value of CHI_MLU based on this model in the test data
+ModelMetrics::rmse(actual, prediction) # How is the performance?
+# 0.66
+# This value (root mean squared error) is bigger than on the training set, meaning that the model might be overfitted (to the training set).
 ```
 
 [HERE GOES YOUR ANSWER]
@@ -160,17 +155,38 @@ In this exercise you have to use cross-validation to calculate the predictive er
 
 
 ```{r}
-# Cutting the train dataset into a certain amount of slices. Repeat what we have been doing so far. Train on all slices except for one. TEst on that. Save the testing performance. Then do it for the next slice (train and test...). 5 is a standard number of times. Gives a nice measure of how well the model will generalise to new data without using new data. If the five values are very far from each other: you are not doing too good.
-# cvms package - does cross validation and calcultation of performance for you. Try to start making own loop, you learn from that - but do not spend too much time doing this... primarily for you to learn.
-
-
 #- Create the basic model of ChildMLU as a function of Time and Diagnosis (don't forget the random effects!).
-m0 <- lmer(CHI_MLU ~ Visit * Diagnosis + (1 + Visit|Child.ID), df_train, REML = F)
-summary(m0)
+m0 <- lmer(CHI_MLU ~ Visit + Diagnosis + (1 + Visit|Child.ID), df_train, REML = F)
 
 #- Make a cross-validated version of the model. (Tips: google the function "createFolds";  loop through each fold, train a model on the other folds and test it on the fold)
 set.seed(1)
-folds <- createFolds(unique(df_train$Child.ID), 5)
+folds <- createFolds(unique(df_train$Child.ID), 5) # Creating the folds
+
+rmse0 = NULL
+
+# Making a loop
+for (f in folds){
+  train <- subset(df_train, !(Child.ID %in% f)) # Train data - removing the current fold (the children with IDs, which are in the fold)
+  model <- lmer(CHI_MLU ~ Visit + Diagnosis + (1 + Visit|Child.ID), data=train, REML = F, lmerControl(optCtrl=list(xtol_abs=1e-8, ftol_abs=1e-8))) # Defining the model
+  actual <- na.omit(subset(df_train, (Child.ID %in% f))) # Test data - only consisting of the current fold (the children with IDs, which are in the fold)
+  predictions <- predict(model, actual, allow.new.levels = T) # Predictions for the test-data's child MLU based on the model
+  print(ModelMetrics::rmse(actual$CHI_MLU, predictions)) # The root mean squared error - comparing the actual data to the predictions
+  rmse0 <- c(rmse0, na.omit(ModelMetrics::rmse(actual$CHI_MLU, predictions))) # Putting the resulting root mean squared errors within a variable
+}
+
+# Calculating the mean
+mean(rmse0)
+
+#- Report the results and comment on them.
+# The root mean squared errors are respectively: 0.46, 0.72, 0.54, 0.58 and 0.34. Resulting in a mean of 0.53.
+
+# Checking the standard deviation of the child MLUs
+sd(na.omit(df_train$CHI_MLU))
+# Standard deviation = 0.93. Meaning that the model is a better prediction than the mean of the data.
+
+#- Now try to find the best possible predictive model of ChildMLU, that is, the one that produces the best cross-validated results.
+# A two-way interaction effect
+rmse1 = NULL
 
 for (f in folds){
   train <- subset(df_train, !(Child.ID %in% f)) # Train data
@@ -178,31 +194,30 @@ for (f in folds){
   actual <- na.omit(subset(df_train, (Child.ID %in% f))) # Test data
   predictions <- predict(model, actual, allow.new.levels=T)
   print(ModelMetrics::rmse(actual$CHI_MLU, predictions))
-  rmse1 <- c(rmse, na.omit(ModelMetrics::rmse(actual$CHI_MLU, predictions)))
+  rmse1 <- c(rmse1, na.omit(ModelMetrics::rmse(actual$CHI_MLU, predictions)))
 }
 
-#- Report the results and comment on them.
+# Calculating the mean
 mean(rmse1)
 
-# These are relatively close to each other, this is a good sign. The average of this particular cross-validation = 0.38
-sd(na.omit(df_train$CHI_MLU))
-# Standard deviation = 0.93. Meaning that the model is a better prediction than the mean of the data.
+# Resulting in root mean squared errors of respectively 0.37, 0.82, 0.54, 0.57 and 0.31. The mean of these errors is 0.5. That is, a bit smaller error than for the baseline model, but not much.
 
-#- Now try to find the best possible predictive model of ChildMLU, that is, the one that produces the best cross-validated results.
+# A three-way interaction effect
+rmse2 = NULL
+
 for (f in folds){
   train <- subset(df_train, !(Child.ID %in% f)) # Train data
-  model <- lmer(CHI_MLU ~ Visit + Diagnosis + (1 + Visit|Child.ID), data=train, REML = F, lmerControl(optCtrl=list(xtol_abs=1e-8, ftol_abs=1e-8)))
+  model <- lmer(CHI_MLU ~ Visit * Diagnosis * verbalIQ1+ (1 + Visit|Child.ID), data=train, REML = F, lmerControl(optCtrl=list(xtol_abs=1e-8, ftol_abs=1e-8)))
   actual <- na.omit(subset(df_train, (Child.ID %in% f))) # Test data
   predictions <- predict(model, actual, allow.new.levels=T)
   print(ModelMetrics::rmse(actual$CHI_MLU, predictions))
-  rmse0 <- c(rmse, na.omit(ModelMetrics::rmse(actual$CHI_MLU, predictions)))
+  rmse2 <- c(rmse2, na.omit(ModelMetrics::rmse(actual$CHI_MLU, predictions)))
 }
 
-# Mean
-mean(rmse0)
+# Calculating the mean
+mean(rmse2)
 
-# Bonus Question 1: What is the effect of changing the number of folds? Can you plot RMSE as a function of number of folds?
-# Bonus Question 2: compare the cross-validated predictive error against the actual predictive error on the test data
+# Resulting in root mean squared errors of respectively 0.38, 0.60, 0.35, 0.54 and 0.38. The mean of these errors is 0.45. That is again, a smaller error than for the baseline model, and also smaller than the model including only a two-way interaction.
 ```
 
 [HERE GOES YOUR ANSWER]
