@@ -201,18 +201,23 @@ Assume you have only the resources to collect 30 kids (15 with ASD and 15 TDs). 
 pc_30_Visit <- powerCurve(model0, test = fixed("Visit"), along = "Child.ID", nsim = 100, breaks = seq(from = 1, to = 30, by = 5), seed = 1)
 print(pc_30_Visit)
 plot(pc_30_Visit)
-# With 30 participants, the power for the main effect of "Visit" is 100%.
+# With 30 children, the power for the main effect of "Visit" is 100%.
 
 pc_30_Diagnosis <- powerCurve(model0, test = fixed("Diagnosis"), along = "Child.ID", nsim = 100, breaks = seq(from = 1, to = 32, by = 2), seed = 1)
 print(pc_30_Diagnosis)
 plot(pc_30_Diagnosis)
-# With 30 participants, the power for the main effect of "Diagnosis" is 11%.
+# With 30 participants, the power for the main effect of "Diagnosis" is around 5%.
 
 # Interaction effect
 pc_30_inter <- powerCurve(model, test = fixed("Visit:Diagnosis"), along = "Child.ID", nsim = 100, breaks = seq(from = 1, to = 32, by = 2), seed = 1)
 print(pc_30_inter)
 plot(pc_30_inter)
-# With 30 participants, the power for the interaction effect is 47%.
+# With 30 participants, the power for the interaction effect is 44%.
+
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
 
 
 # Creating a random sample of the data to test the power with 30 participants (15 ASD and 15 TD).
@@ -233,24 +238,31 @@ df30 <- bind_rows(TD, ASD)
 summary(as.factor(df30$Diagnosis))
 
 
-# Calculating power
+# Specifying models
 model0_30 <- lmer(CHI_MLU ~ Visit + Diagnosis + (1 + Visit|Child.ID), df30, REML = F, control = lmerControl(optimizer = "nloptwrap", calc.derivs = F))
 
 model_30 <- lmer(CHI_MLU ~ Visit * Diagnosis + (1 + Visit|Child.ID), df30, REML = F, control = lmerControl(optimizer = "nloptwrap", calc.derivs = F))
 
+# Specifying a minimum effect size for the main effects
+fixef(model0_30)["Visit"] <- 0.16
+fixef(model0_30)["DiagnosisTD"] <- 0.07
 
-# On the main effects (model without interactions)
+# Specifying a minimum effect size for the two-way interaction effect
+fixef(model_30)["Visit:DiagnosisTD"] <- 0.1 
+
+# Calculating power
+# On the main effects
 powvis_30 <- powerSim(model0_30, test = fixed("Visit"), nsim = 100, seed = 1)
 powvis_30
-# 100% power for detecting effect of visit (nsim = 100)
+# 98% power for detecting the specified effect of visit (nsim = 100)
 
 powdiag_30 <- powerSim(model0_30, test = fixed("Diagnosis"), nsim = 100, seed = 1)
 powdiag_30
-# 72% power for detecting effect of diagnosis (nsim = 100)
+# 11% power for detecting the specified effect of diagnosis (nsim = 100)
 
 # On the interaction effect
 powinter_30 <- powerSim(model_30, test = fixed("Visit:Diagnosis"), nsim=100, seed = 1)
 powinter_30
-# 88% power for detecting the three-way interaction effect (nsim = 100)
+# 25% power for detecting the specified interaction effect (nsim = 100)
 
 ```
