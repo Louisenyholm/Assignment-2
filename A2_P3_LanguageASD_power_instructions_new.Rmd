@@ -69,7 +69,7 @@ df <- df[-which(is.na(df$CHI_MLU)),]
 df$Child.ID <- as.numeric(as.factor(as.character(df$Child.ID)))
 
 
-# Fitting a model
+# Fitting models
 model0 <- lmer(CHI_MLU ~ Visit + Diagnosis + (1 + Visit|Child.ID), df, REML = F, control = lmerControl(optimizer = "nloptwrap", calc.derivs = F))
 
 model <- lmer(CHI_MLU ~ Visit * Diagnosis + (1 + Visit|Child.ID), df, REML = F, control = lmerControl(optimizer = "nloptwrap", calc.derivs = F))
@@ -102,7 +102,7 @@ powinter
 # Report the power analysis and comment on what you can (or cannot) use its estimates for.
 
 # The main effect of visit has a great power (100%) for detecting the effect of 0.23 on child MLU. That is, an increase per visit (per 4 months) of 0.23 in child MLU.
-# Contrary, the main effect of diagnosis (0.23 on child MLU) is more difficult to detect, because the current study only has 30% power. Meaning, that it is more difficult to detect the average increase of 0.23 morphemes when going from children with ASD to typically developing children. This would require more participants.
+# Contrary, the main effect of diagnosis (0.23 on child MLU) is more difficult to detect, because the current study only has 30% power. Meaning, that it is more difficult to detect the average increase of 0.23 morphemes per utterance when going from children with ASD to typically developing children. This would require more participants.
 # When calculating power for the interaction effect between "Visit" and "Diagnosis", it results in 100% power. This means, that an interaction effect of this size (0.25) is easily detected with a sample like this. Thus, every time visit increases with 1, the difference between child MLU for ASD children and TD children increases with 0.25.
 
 
