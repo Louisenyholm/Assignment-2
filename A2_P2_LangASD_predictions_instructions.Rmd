@@ -49,9 +49,8 @@ How did your models from last time perform? In this exercise you have to compare
 setwd("C:/Users/louis/OneDrive - Aarhus universitet/AU Onedrive - RIGTIG/- 3. Semester/Experimental Methods III/Classes/Assignment 2/Assignment-2")
 
 # Loading packages
-install.packages('BiocManager')
 library(pacman)
-pacman::p_load(tidyverse, caret, cvms, ModelMetrics)
+pacman::p_load(tidyverse, caret, cvms, ModelMetrics, BiocManager)
 
 ## Clean up function, included to inspire you
 
@@ -95,8 +94,8 @@ CleanUpData <- function(Demo,LU,Word){
          "1" = "M",
          "2" = "F"),
       Diagnosis = recode(Diagnosis,
-         "A"  = "TD",
-         "B"  = "ASD")
+         "A"  = "ASD",
+         "B"  = "TD")
     )
 
   return(Data)
@@ -137,7 +136,7 @@ ModelMetrics::rmse(actual, prediction) # How is the performance?
 # This value (root mean squared error) is bigger than on the training set, meaning that the model might be overfitted (to the training set).
 ```
 
-[HERE GOES YOUR ANSWER]
+For all of us, the performance of the model was better in training data compared to testing data. This appears through a measure of root mean squared error, which for our model is 0.36 in the training data, but increases to 0.66. That is, the error increases as the data changes from training to test data. This is probably an indicator of the model being overfitted to the training data.
 
 ### Exercise 2) Model Selection via Cross-validation (N.B: ChildMLU!)
 
@@ -162,7 +161,7 @@ m0 <- lmer(CHI_MLU ~ Visit + Diagnosis + (1 + Visit|Child.ID), df_train, REML = 
 set.seed(1)
 folds <- createFolds(unique(df_train$Child.ID), 5) # Creating the folds
 
-rmse0 = NULL
+rmse0 <- vector() # Creating an empty vector
 
 # Making a loop
 for (f in folds){
@@ -178,15 +177,16 @@ for (f in folds){
 mean(rmse0)
 
 #- Report the results and comment on them.
-# The root mean squared errors are respectively: 0.46, 0.72, 0.54, 0.58 and 0.34. Resulting in a mean of 0.53.
+# The root mean squared errors are respectively: 0.46, 0.72, 0.54, 0.58 and 0.34. Resulting in an average rmse of 0.53 morphemes per utterance.
 
 # Checking the standard deviation of the child MLUs
 sd(na.omit(df_train$CHI_MLU))
-# Standard deviation = 0.93. Meaning that the model is a better prediction than the mean of the data.
+# Standard deviation = 0.93.
+# Meaning that the model is a better prediction than the mean of the data, since 0.53 is a smaller error than 0.93.
 
 #- Now try to find the best possible predictive model of ChildMLU, that is, the one that produces the best cross-validated results.
 # A two-way interaction effect
-rmse1 = NULL
+rmse1 <- vector()
 
 for (f in folds){
   train <- subset(df_train, !(Child.ID %in% f)) # Train data
@@ -200,10 +200,10 @@ for (f in folds){
 # Calculating the mean
 mean(rmse1)
 
-# Resulting in root mean squared errors of respectively 0.37, 0.82, 0.54, 0.57 and 0.31. The mean of these errors is 0.5. That is, a bit smaller error than for the baseline model, but not much.
+# Resulting in root mean squared errors of respectively 0.37, 0.82, 0.54, 0.57 and 0.31. The mean of these errors is 0.5. That is, a bit smaller error than for the baseline model, but not much. And it is, therefore still a better model than the mean.
 
 # A three-way interaction effect
-rmse2 = NULL
+rmse2 <- vector()
 
 for (f in folds){
   train <- subset(df_train, !(Child.ID %in% f)) # Train data
@@ -217,10 +217,8 @@ for (f in folds){
 # Calculating the mean
 mean(rmse2)
 
-# Resulting in root mean squared errors of respectively 0.38, 0.60, 0.35, 0.54 and 0.38. The mean of these errors is 0.45. That is again, a smaller error than for the baseline model, and also smaller than the model including only a two-way interaction.
+# Resulting in root mean squared errors of respectively 0.38, 0.60, 0.35, 0.54 and 0.38. The mean of these errors is 0.45. That is again, a smaller error than for the baseline model, and also smaller than the model including only a two-way interaction. Therefore, the best model seems to be the model which includes a triple interaction effect between Visit, Diagnosis and verbalIQ1. 
 ```
-
-[HERE GOES YOUR ANSWER]
 
 ### Exercise 3) Assessing the single child
 
@@ -235,6 +233,7 @@ You want to evaluate:
 - how does the child fare compared to the model predictions at Visit 6? Is the child below or above expectations? (tip: use the predict() function on Bernie's data only and compare the prediction with the actual performance of the child)
 
 ```{r}
+set.seed(1)
 # Bernie = Child.ID: 2
 
 # Extracting Bernie from the rest of the children
@@ -242,20 +241,27 @@ Bernie <-
   df_test %>% 
   filter(Child.ID == 2)
 
-# Checking the mean of the TD's in each visit
-TDs <-
+# Checking the mean of the TD's in each visit and the difference between the average and Bernie
+TD_Bernie <-
   df_train %>% 
   filter(Diagnosis == "TD") %>% 
   group_by(Visit) %>% 
-  summarise(mean = mean(CHI_MLU, na.rm = T)) %>% 
-  mutate(difference = (Bernie$CHI_MLU-TDs$mean))
+  summarise(TDmean = mean(CHI_MLU, na.rm = T)) %>% 
+  mutate(Bernie$CHI_MLU) %>% 
+  mutate(difference = (Bernie$CHI_MLU - TDmean))
 
-# That is, Bernie has longer MLU than the average TD child througout all the visits.
+mean(TD_Bernie$difference)
+# This shows that Bernie has longer MLU than the average TD child througout all the visits - on average a MLU, which is 1.30 morphemes longer than the average typically developing child.
+
 
 # Bernie compared to predictions for visit 6 - is he below or above expectations?
-prediction <- predict(m0, Bernie)
+# Specifying our best model
+m_best <- lmer(CHI_MLU ~ Visit * Diagnosis * verbalIQ1+ (1 + Visit|Child.ID), data = df_train, REML = F, lmerControl(optCtrl=list(xtol_abs=1e-8, ftol_abs=1e-8)))
+
+prediction <- predict(m_best, Bernie) # Predicting Bernie's values based on the best model
 prediction
 # Me and Anna get 3.78, the boys get 1.72.
+# Now I get 3.92
 
 # Bernies actual performance at visit 6
 Bernie %>% 
