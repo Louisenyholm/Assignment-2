@@ -81,23 +81,29 @@ fixef(model0)["verbalIQ1"] # main effect of 0.08
 fixef(model)["Visit:DiagnosisTD:verbalIQ1"] # interaction effect of -0.02
 
 # Running the power analysis
-set.seed(123) # Setting a fixed "random"
+set.seed(1) # Setting a fixed "random"
 
 # On the main effects (model without interactions)
-powerSim(model0, test = fixed("Visit"), nsim = 100) # 100% power for detecting effect of visit (nsim = 100)
-powerSim(model0, test = fixed("Diagnosis"), nsim = 100) # 52% power for detecting effect of diagnosis (nsim = 100)
-powerSim(model0, test = fixed("verbalIQ1"), nsim = 100) # 100% power for detecting effect of verbal IQ (nsim = 100)
+powvis <- powerSim(model0, test = fixed("Visit"), nsim = 100, seed = 1) # 100% power for detecting effect of visit (nsim = 100)
+powvis
+powdia <- powerSim(model0, test = fixed("Diagnosis"), nsim = 100, seed = 1) # 50% power for detecting effect of diagnosis (nsim = 100)
+powdia
+powverbal <- powerSim(model0, test = fixed("verbalIQ1"), nsim = 100, seed = 1) # 100% power for detecting effect of verbal IQ (nsim = 100)
+powverbal
 
 # On the interaction effect
-powerSim(model, test = fixed("Visit:Diagnosis:verbalIQ1"), nsim=1000) # 98.30% power for detecting the three-way interaction effect (nsim = 1000)
+powinter <- powerSim(model, test = fixed("Visit:Diagnosis:verbalIQ1"), nsim=100, seed = 1) # 96% power for detecting the three-way interaction effect (nsim = 1000)
+powinter
+
 
 
 # Report the power analysis and comment on what you can (or cannot) use its estimates for.
 
 # The interaction of Visit * Diagnosis * VerbalIQ1
-# Calculating power based on 1000 simulations gives a beta/power value of 0.97. This means, that an interaction effect of this size (-0.02) is easily detected with a sample like this. It might even be an overpowered study.
+# Calculating power based on 1000 simulations gives a beta/power value of 0.98. This means, that an interaction effect of this size (-0.02) is easily detected with a sample like this. It might even be an overpowered study.
 # COMMENT ON MAIN EFFECTS
-# Correspondingly, the main effects of visit and verbal IQ have a great power (100%). The effect of diagnosis is however just slightly above chance (0.52) for detecting an effect, when it is present.
+# Correspondingly, the main effects of visit and verbal IQ have a great power (100%). The effect of diagnosis is however just around chance level (0.50) for detecting an effect, when it is present.
+
 
 
 # Test how many participants you would have to have to replicate the findings (assuming the findings are correct)
@@ -108,23 +114,23 @@ powerSim(model, test = fixed("Visit:Diagnosis:verbalIQ1"), nsim=1000) # 98.30% p
 model_extended <- extend(model0, along =  "Child.ID", n = 200)
 
 # Main effects
-pc_Visit <- powerCurve(model0, test = fixed("Visit"), along = "Child.ID", nsim = 100)
+pc_Visit <- powerCurve(model0, test = fixed("Visit"), along = "Child.ID", nsim = 100, seed = 1)
 print(pc_Visit)
 plot(pc_Visit)
 # In order to replicate the findings of a main effect of Visit, one would need around 11 participants (resulting in a beta-value/power of .90)
 
-pc_Diagnosis <- powerCurve(model_extended, test = fixed("Diagnosis"), along = "Child.ID", nsim = 100)
+pc_Diagnosis <- powerCurve(model_extended, test = fixed("Diagnosis"), along = "Child.ID", nsim = 100, seed = 1)
 print(pc_Diagnosis)
 plot(pc_Diagnosis)
 # In order to replicate the findings of a main effect of Diagnosis, one would need around 156 participants (resulting in a beta-value/power of .80)
 
-pc_VerbalIQ <- powerCurve(model0, test = fixed("verbalIQ1"), along = "Child.ID", nsim = 100)
+pc_VerbalIQ <- powerCurve(model0, test = fixed("verbalIQ1"), along = "Child.ID", nsim = 100, seed = 1)
 print(pc_VerbalIQ)
 plot(pc_VerbalIQ)
 # In order to replicate the findings of a main effect of verbal IQ, one would need around 11 participants (resulting in a beta-value/power of .88)
 
 
-pc_inter <- powerCurve(model, test = fixed("Visit:Diagnosis:verbalIQ1"), along = "Child.ID", nsim = 100)
+pc_inter <- powerCurve(model, test = fixed("Visit:Diagnosis:verbalIQ1"), along = "Child.ID", nsim = 100, seed = 1)
 print(pc_inter)
 plot(pc_inter)
 # In order to replicate the findings of a three-way interaction effect, one would need around 34 participants (resulting in a beta-value/power of .84)
@@ -150,6 +156,16 @@ How would you perform a more conservative power analysis?
 ggplot(df, aes(Visit, CHI_MLU, colour = Diagnosis))+
   geom_point()+
   geom_smooth(method = lm)
+
+# For main effect of visit
+# A minimum effect size for the main effect of visit, could be justified to be 0.16. This is based on (EVIDENCE). According to this article, the increase in MLU from 15-28 months is 0.5. This is a 13-month gap, corresponding to approximately 3 visits in our data. This suggests that the MLU development pr. visit is around 0.16.
+
+# For main effect of Diagnosis
+#
+
+# For main effect of Verbal IQ
+
+# For three-way interaction effect between visit*diagnosis*verbalIQ
 
 
 # - Take the model from exercise 1 and replace the effects with the minimum effect size that you'd accept.

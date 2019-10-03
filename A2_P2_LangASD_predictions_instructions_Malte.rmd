@@ -52,8 +52,6 @@ install.packages("githubinstall")
 library(githubinstall)
 # githubinstall("cvms")
 
-
-
 ## Clean up function, included to inspire you
 
 CleanUpData <- function(Demo,LU,Word){
@@ -96,8 +94,8 @@ CleanUpData <- function(Demo,LU,Word){
          "1" = "M",
          "2" = "F"),
       Diagnosis = recode(Diagnosis,
-         "A"  = "TD", #CHANGE!?!?!?!?!?!
-         "B"  = "ASD") #CHANGE!?!?!?!
+         "A"  = "ASD",
+         "B"  = "TD")
     )
 
   return(Data)
@@ -108,10 +106,11 @@ Demo_train <- read_csv("demo_train.csv")
 LU_train <- read_csv("LU_train.csv")
 Word_train <- read_csv("token_train.csv")
 
+# Cleaning up the data
 df_train <- CleanUpData(Demo_train, LU_train, Word_train)
+
 #- recreate the models you chose last time (just write the code again and apply it to Train Data)
 m1 <- lmer(CHI_MLU ~ Visit * Diagnosis * verbalIQ1 + (1 + Visit|Child.ID), df_train, REML = F)
-summary(m1)
 
 #- calculate performance of the model on the training data: root mean square error is a good measure. (Tip: google the function rmse())
 actual <- na.omit(df_train$CHI_MLU)

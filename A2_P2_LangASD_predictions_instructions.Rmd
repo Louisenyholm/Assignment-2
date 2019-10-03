@@ -1,7 +1,7 @@
 ---
 title: "Assignment 2 - Language Development in ASD - Making predictions"
-author: "Riccardo Fusaroli"
-date: "August 9, 2019"
+author: "Anna, Oliver, Malte & Louise"
+date: "03-10-2019"
 output: html_document
 ---
 
@@ -90,6 +90,7 @@ CleanUpData <- function(Demo,LU,Word){
     mutate(
       Child.ID = as.numeric(as.factor(as.character(Child.ID))), #Anonymising participants
       Visit = as.numeric(as.character(Visit)),
+      Diagnosis = as.factor(Diagnosis)
       Gender = recode(Gender, 
          "1" = "M",
          "2" = "F"),
@@ -251,7 +252,7 @@ TD_Bernie <-
   mutate(difference = (Bernie$CHI_MLU - TDmean))
 
 mean(TD_Bernie$difference)
-# This shows that Bernie has longer MLU than the average TD child througout all the visits - on average a MLU, which is 1.30 morphemes longer than the average typically developing child.
+# This shows that Bernie has longer MLU than the average TD child througout all the visits - on average a MLU, which is 0.63 morphemes longer than the average typically developing child.
 
 
 # Bernie compared to predictions for visit 6 - is he below or above expectations?
@@ -260,8 +261,7 @@ m_best <- lmer(CHI_MLU ~ Visit * Diagnosis * verbalIQ1+ (1 + Visit|Child.ID), da
 
 prediction <- predict(m_best, Bernie) # Predicting Bernie's values based on the best model
 prediction
-# Me and Anna get 3.78, the boys get 1.72.
-# Now I get 3.92
+# The prediction is 3.91 in Bernie's MLU at visit 6 
 
 # Bernies actual performance at visit 6
 Bernie %>% 
@@ -269,12 +269,9 @@ Bernie %>%
   select(CHI_MLU)
 # 3.45
 
-# That is, following me and Anna's predictions, he does worse than expected. But following Oliver and Malte's predictions, Bernie does better than expected.
+# That is, following the prediction, Bernie's MLU is worse than expected/predicted.
 
 ```
-
-
-[HERE GOES YOUR ANSWER]
 
 ### OPTIONAL: Exercise 4) Model Selection via Information Criteria
 Another way to reduce the bad surprises when testing a model on new data is to pay close attention to the relative information criteria between the models you are comparing. Let's learn how to do that!
