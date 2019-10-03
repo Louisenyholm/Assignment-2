@@ -1,7 +1,7 @@
 ---
 title: "Assignment 1 - Language Development in ASD - Power and simulations"
-author: "[YOUR NAME]"
-date: "[DATE]"
+author: "Anna, Oliver, Malte & Louise"
+date: "03-10-2019"
 output: html_document
 ---
 
@@ -74,6 +74,8 @@ model0 <- lmer(CHI_MLU ~ Visit + Diagnosis + (1 + Visit|Child.ID), df, REML = F,
 
 model <- lmer(CHI_MLU ~ Visit * Diagnosis + (1 + Visit|Child.ID), df, REML = F, control = lmerControl(optimizer = "nloptwrap", calc.derivs = F))
 
+# For the sake of interpretation, we have used the two-way interaction of Visit and Diagnosis, instead of the earlier used three-way interaction
+
 # Checking the main effect estimates
 fixef(model0)["Visit"] # main effect of 0.23
 fixef(model0)["DiagnosisTD"] # main effect of 0.23
@@ -127,8 +129,6 @@ pc_inter <- powerCurve(model, test = fixed("Visit:Diagnosis"), along = "Child.ID
 print(pc_inter)
 plot(pc_inter)
 # In order to replicate the findings of a three-way interaction effect, one would need around 16 participants (resulting in power of .80)
-
-
 ```
 
 
@@ -148,47 +148,35 @@ How would you perform a more conservative power analysis?
 # A minimum effect size for the main effect of visit, could be justified to be 0.16. This is based on the results of a study done on child MLU development (Ranti & Tadris Bahasa Inggris, 2015). According to this article, the increase in MLU from 15-28 months is 0.5. This is a 13-month gap, corresponding to approximately 3 visits in our data. This suggests that the MLU development pr. visit is around 0.16.
 
 # For main effect of Diagnosis
-# For the main effect of ‘Diagnosis’, a minimum effect size of 0.07 was specified, based on a study comparing children with ASD and TD children (Swensen, Kelley, Fein, & Naigles, 2007). This study showed an average difference of 0.07 at 21 months of age. This effect size seems absurd and incredibly small, however it was used
+# For the main effect of ‘Diagnosis’, a minimum effect size of 0.3 was specified, based on a study comparing children with ASD and TD children (Venuti, de Falco, Esposito, Zaninelli, & Bornstein, 2012). This study showed an average difference of 0.4, which is more than what we have found in our data (0.23). Therefore, we have chosen to be less conservative in this specified effect, setting it to 0.3. According to this, the effect size found in our data (0.23) is not big enough to be relevant (these children were matched on language abilities - in the beginning of the study, and this might be the reason why the effect does not appear that big in the data. It would probably have been bigger if the children had been matched on age).
 
 # For two-way interaction effect between Visit and Diagnosis
-# # # # # # # # # # # # # WRITE HERE # # # # # # # # # # # # # #
+# We have compared the effect in our study (0.25) to the effect of another study (0.29), but have chosen to be even more conservative (0.2), since we already have a lot of power for detecting these bigger effect sizes (Tek, Mesite, Fein, & Naigles, 2014). That is, an increase of 0.2 morphemes per utterance per visit in the difference between the two diagnoses.
 
 
 # - Take the model from exercise 1 and replace the effects with the minimum effect size that you'd accept.
 # Specifying a minimum effect size for the main effects
 fixef(model0)["Visit"] <- 0.16
-fixef(model0)["DiagnosisTD"] <- 0.07
+fixef(model_extended)["DiagnosisTD"] <- 0.3
 
 # Specifying a minimum effect size for the two-way interaction effect
-fixef(model)["Visit:DiagnosisTD"] <- 0.1 
+fixef(model)["Visit:DiagnosisTD"] <- 0.2
 
 # - Assess the power curve by Child.ID, identifying an ideal number of participants to estimate each effect
 pc_Visit2 <- powerCurve(model0, test = fixed("Visit"), along = "Child.ID", nsim = 100, seed = 1)
 print(pc_Visit2)
 plot(pc_Visit2)
-# In order to replicate the findings of a main effect of "Visit" with a more conservative approach (effect size of 0.16), one would need around 14 participants (resulting in power of .80)
+# In order to find a main effect of "Visit" with a more conservative approach (effect size of 0.16), one would need around 14 participants (resulting in power of .80)
 
-# Extending the model even more in order to be able to detect this very small effect
-model_extended2 <- extend(model0, along =  "Child.ID", n = 2200)
-
-# Checking the effect size is as we have specified in the newly extended model
-fixef(model_extended2)
-
-pc_Diagnosis2 <- powerCurve(model_extended2, test = fixed("Diagnosis"), along = "Child.ID", nsim = 100, seed = 1)
+pc_Diagnosis2 <- powerCurve(model_extended, test = fixed("Diagnosis"), along = "Child.ID", nsim = 100, seed = 1)
 print(pc_Diagnosis2)
 plot(pc_Diagnosis2)
-# In order to replicate the findings of a main effect of "Diagnosis" with a very conservative approach (effect size of 0.07), one would need around 2200 participants (resulting in power of .80)
+# In order to find a main effect of "Diagnosis" with a very conservative approach (effect size of 0.3), one would need around 196 participants (resulting in power of .80)
 
-# A smaller extension is needed to detect this effect
-model_extended3 <- extend(model, along = "Child.ID", n = 80)
-
-# Checking the effect size is as we have specified in the newly extended model
-fixef(model_extended3)
-
-pc_Inter2 <- powerCurve(model_extended3, test = fixed("Visit:Diagnosis"), along = "Child.ID", nsim = 100, seed = 1)
+pc_Inter2 <- powerCurve(model, test = fixed("Visit:Diagnosis"), along = "Child.ID", nsim = 100, seed = 1)
 print(pc_Inter2)
 plot(pc_Inter2)
-# In order to replicate the findings of an interaction effect with a more conservative approach (effect size of 0.1), one would need around 59 participants (resulting in power of .80)
+# In order to find an interaction effect with a more conservative approach (effect size of 0.2), one would need around 19 participants (resulting in power of .80)
 ```
 
 
@@ -197,29 +185,6 @@ plot(pc_Inter2)
 Assume you have only the resources to collect 30 kids (15 with ASD and 15 TDs). Identify the power for each relevant effect and discuss whether it's worth to run the study and why
 
 ```{r}
-# Main effects
-pc_30_Visit <- powerCurve(model0, test = fixed("Visit"), along = "Child.ID", nsim = 100, breaks = seq(from = 1, to = 30, by = 5), seed = 1)
-print(pc_30_Visit)
-plot(pc_30_Visit)
-# With 30 children, the power for the main effect of "Visit" is 100%.
-
-pc_30_Diagnosis <- powerCurve(model0, test = fixed("Diagnosis"), along = "Child.ID", nsim = 100, breaks = seq(from = 1, to = 32, by = 2), seed = 1)
-print(pc_30_Diagnosis)
-plot(pc_30_Diagnosis)
-# With 30 participants, the power for the main effect of "Diagnosis" is around 5%.
-
-# Interaction effect
-pc_30_inter <- powerCurve(model, test = fixed("Visit:Diagnosis"), along = "Child.ID", nsim = 100, breaks = seq(from = 1, to = 32, by = 2), seed = 1)
-print(pc_30_inter)
-plot(pc_30_inter)
-# With 30 participants, the power for the interaction effect is 44%.
-
-
-
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-
-
-
 # Creating a random sample of the data to test the power with 30 participants (15 ASD and 15 TD).
 set.seed(1)
 DATA = df %>% group_by(Child.ID, Diagnosis) %>%
@@ -243,26 +208,25 @@ model0_30 <- lmer(CHI_MLU ~ Visit + Diagnosis + (1 + Visit|Child.ID), df30, REML
 
 model_30 <- lmer(CHI_MLU ~ Visit * Diagnosis + (1 + Visit|Child.ID), df30, REML = F, control = lmerControl(optimizer = "nloptwrap", calc.derivs = F))
 
-# Specifying a minimum effect size for the main effects
-fixef(model0_30)["Visit"] <- 0.16
-fixef(model0_30)["DiagnosisTD"] <- 0.07
-
-# Specifying a minimum effect size for the two-way interaction effect
-fixef(model_30)["Visit:DiagnosisTD"] <- 0.1 
+# Assuming that the effects in the data are the "right" effects, and calculating power based on the 30 random participants (15 ASD and 15 TD)
 
 # Calculating power
 # On the main effects
 powvis_30 <- powerSim(model0_30, test = fixed("Visit"), nsim = 100, seed = 1)
 powvis_30
-# 98% power for detecting the specified effect of visit (nsim = 100)
+# 100% power for detecting the effect of visit (0.23)
 
 powdiag_30 <- powerSim(model0_30, test = fixed("Diagnosis"), nsim = 100, seed = 1)
 powdiag_30
-# 11% power for detecting the specified effect of diagnosis (nsim = 100)
+# 48% power for detecting the effect of diagnosis (0.23)
 
 # On the interaction effect
 powinter_30 <- powerSim(model_30, test = fixed("Visit:Diagnosis"), nsim=100, seed = 1)
 powinter_30
-# 25% power for detecting the specified interaction effect (nsim = 100)
+# 93% power for detecting the interaction effect (0.25)
+
+# If we only had access to 30 (random) participants (15 ASD and 15 TD), the power for detecting the main effect of ‘Visit’ and the interaction effect of ‘Visit’ and ‘Diagnosis’ would be sufficient (power of respectively 100% and 93%). However, the study would only have 48% power for detecting the main effect of ‘Diagnosis’.
+# We would argue, that it is still worth running the study, since there is an interaction effect, which can be detected. And this tells us more accurately about the data than the main effect in isolation.
+
 
 ```
