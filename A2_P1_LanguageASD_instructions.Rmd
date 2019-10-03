@@ -1,7 +1,7 @@
 ---
 title: "Assignment 2 - Language Development in ASD - Part 1 - Explaining development"
-author: "Louise Nyholm"
-date: "12-09-2019"
+author: "Anna, Oliver, Malte & Louise"
+date: "03-10-2019"
 output: html_document
 ---
     
@@ -132,16 +132,7 @@ df1 %>%
   nonverbalIQ = mean(MULLENRAW1, na.rm = T),
   sdnonverbalIQ = sd(MULLENRAW1, na.rm = T))
 # ASD = 31 (mean age = 33.04 months), TD = 35 (mean age = 20.38 months)
-
-# Ethnicity (if we find it relevant)
-df1 %>% 
- group_by(ETHNICITY) %>% 
-  summarise(events = n())
 ```
-
-The sample included mostly young (<20) white males ...
-
-[REPORT THE RESULTS]
 
 ## Let's test hypothesis 1: Children with ASD display a language impairment  (Exercise 2)
 
